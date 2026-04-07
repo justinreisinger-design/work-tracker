@@ -6,19 +6,23 @@
 <title>Work Tracker</title>
 <style>
 :root {
-  --bg: #FAFAFA;
+  --bg: #F1F5F9;
   --surface: #FFFFFF;
-  --primary: #007AFF;
-  --red: #FF3B30;
-  --orange: #FF9500;
-  --green: #34C759;
-  --t1: #1C1C1E;
-  --t2: #636366;
-  --t3: #AEAEB2;
-  --t4: #D1D1D6;
-  --sep: rgba(60,60,67,0.1);
+  --primary: #6366F1;
+  --primary-dark: #4F46E5;
+  --red: #EF4444;
+  --orange: #F59E0B;
+  --green: #10B981;
+  --t1: #0F172A;
+  --t2: #475569;
+  --t3: #94A3B8;
+  --t4: #CBD5E1;
+  --sep: rgba(15,23,42,0.08);
   --radius: 12px;
-  --f: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 40px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
+  --f: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
@@ -79,49 +83,49 @@ body {
 
 /* ── SIDEBAR (desktop / wide) ── */
 .sidebar {
-  width: 200px;
+  width: 216px;
   flex-shrink: 0;
-  background: var(--surface);
-  border-right: 1px solid var(--sep);
+  background: var(--t1);
+  border-right: none;
   display: flex;
   flex-direction: column;
   padding: 0;
   overflow: hidden;
 }
 .app-name {
-  padding: 18px 16px 12px;
-  font-size: 17px;
+  padding: 22px 18px 14px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.3px;
-  color: var(--t1);
+  color: #fff;
 }
-.app-name span { display: block; font-size: 11px; font-weight: 500; color: var(--t3); margin-top: 1px; letter-spacing: 0; }
+.app-name span { display: block; font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.38); margin-top: 2px; letter-spacing: 0; }
 
-.nav { flex: 1; padding: 4px 8px; overflow-y: auto; }
+.nav { flex: 1; padding: 4px 10px; overflow-y: auto; }
 .nav-btn {
   width: 100%;
-  display: flex; align-items: center; gap: 9px;
-  padding: 9px 10px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
   border: none; background: none;
-  border-radius: 9px;
+  border-radius: 10px;
   cursor: pointer;
   font-family: var(--f);
   font-size: 14px;
   font-weight: 500;
-  color: var(--t2);
+  color: rgba(255,255,255,0.55);
   text-align: left;
-  transition: background 0.1s;
+  transition: background 0.15s, color 0.15s;
   position: relative;
-  margin-bottom: 1px;
+  margin-bottom: 2px;
 }
-.nav-btn:hover { background: var(--bg); }
-.nav-btn.active { background: rgba(0,122,255,0.1); color: var(--primary); font-weight: 600; }
-.nav-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+.nav-btn.active { background: var(--primary); color: white; font-weight: 600; }
+.nav-icon { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
 .nav-badge {
   margin-left: auto;
   background: var(--red);
   color: white;
-  font-size: 11px; font-weight: 700;
+  font-size: 10px; font-weight: 700;
   min-width: 18px; height: 18px;
   border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
@@ -129,17 +133,17 @@ body {
 }
 
 .sidebar-foot {
-  padding: 10px 12px;
-  border-top: 1px solid var(--sep);
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255,255,255,0.08);
 }
 .sync-row {
   display: flex; align-items: center; gap: 7px;
-  padding: 7px 8px; border-radius: 8px;
-  cursor: pointer; font-size: 12px; color: var(--t3);
+  padding: 8px 10px; border-radius: 9px;
+  cursor: pointer; font-size: 12px; color: rgba(255,255,255,0.38);
   transition: background 0.1s;
 }
-.sync-row:hover { background: var(--bg); }
-.sdot { width: 6px; height: 6px; border-radius: 50%; background: var(--t4); flex-shrink: 0; }
+.sync-row:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); }
+.sdot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.2); flex-shrink: 0; }
 .sdot.ok { background: var(--green); }
 .sdot.err { background: var(--red); }
 .sdot.busy { background: var(--orange); animation: blink 1s infinite; }
@@ -204,17 +208,22 @@ body {
   letter-spacing: -0.5px; color: var(--t1);
 }
 .add-btn {
-  width: 34px; height: 34px;
+  position: fixed;
+  bottom: 28px; right: 28px;
+  width: 60px; height: 60px;
   background: var(--primary);
   color: white; border: none;
-  border-radius: 50%; font-size: 20px;
+  border-radius: 50%; font-size: 28px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; font-family: var(--f);
-  transition: opacity 0.1s; flex-shrink: 0;
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+  z-index: 40; flex-shrink: 0;
   line-height: 1;
 }
-.add-btn:hover { opacity: 0.85; }
-.add-btn:active { transform: scale(0.94); }
+.add-btn:hover { background: var(--primary-dark); transform: scale(1.07); box-shadow: 0 12px 40px rgba(99,102,241,0.45); }
+.add-btn:active { transform: scale(0.95); }
+@media (max-width: 580px) { .add-btn { bottom: 76px; right: 20px; width: 54px; height: 54px; font-size: 24px; } }
 
 /* ── FILTER PILLS ── */
 .filters {
@@ -258,14 +267,14 @@ body {
 .task-item {
   display: flex; align-items: flex-start;
   gap: 12px;
-  padding: 11px 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--sep);
-  transition: background 0.1s;
+  transition: background 0.12s;
   cursor: default;
-  min-height: 48px;
+  min-height: 50px;
 }
 .task-item:last-child { border-bottom: none; }
-.task-item:hover { background: rgba(0,0,0,0.02); }
+.task-item:hover { background: rgba(99,102,241,0.03); }
 
 .check {
   width: 22px; height: 22px; border-radius: 50%;
@@ -276,12 +285,12 @@ body {
   transition: all 0.15s;
   font-size: 11px; font-weight: 700; color: white;
 }
-.check:hover { border-color: var(--primary); background: rgba(0,122,255,0.1); }
+.check:hover { border-color: var(--primary); background: rgba(99,102,241,0.12); }
 .check.done { background: var(--green); border-color: var(--green); }
 .check.p-high { border-color: var(--red); }
-.check.p-high:hover { background: rgba(255,59,48,0.1); }
+.check.p-high:hover { background: rgba(239,68,68,0.1); }
 .check.p-med { border-color: var(--orange); }
-.check.p-med:hover { background: rgba(255,149,0,0.1); }
+.check.p-med:hover { background: rgba(245,158,11,0.1); }
 
 .task-body { flex: 1; min-width: 0; }
 .task-text {
@@ -306,12 +315,12 @@ body {
 
 .task-del {
   background: none; border: none; cursor: pointer;
-  color: var(--t4); font-size: 14px;
-  padding: 2px 4px; opacity: 0; transition: opacity 0.1s;
-  border-radius: 6px; flex-shrink: 0; align-self: center;
+  color: var(--t4); font-size: 16px;
+  padding: 4px 6px; opacity: 0; transition: opacity 0.15s, color 0.1s, background 0.1s;
+  border-radius: 8px; flex-shrink: 0; align-self: center;
 }
 .task-item:hover .task-del { opacity: 1; }
-.task-del:hover { color: var(--red); background: rgba(255,59,48,0.08); }
+.task-del:hover { color: var(--red); background: rgba(239,68,68,0.1); }
 
 /* ── EMPTY ── */
 .empty {
@@ -326,10 +335,11 @@ body {
 /* ── SURFACE CARD (projects/people list) ── */
 .list-card {
   background: var(--surface);
-  border-radius: var(--radius);
-  margin: 0 12px 8px;
+  border-radius: 14px;
+  margin: 0 14px 10px;
   overflow: hidden;
   border: 1px solid var(--sep);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ── PERSON / PROJECT ROW ── */
@@ -387,9 +397,10 @@ body {
 
 .panel {
   position: fixed; top: 0; right: -110%;
-  width: min(460px, 100vw); height: 100%;
+  width: min(480px, 100vw); height: 100%;
   background: var(--surface);
   border-left: 1px solid var(--sep);
+  box-shadow: var(--shadow-lg);
   z-index: 61; display: flex; flex-direction: column;
   transition: right 0.28s cubic-bezier(0.4,0,0.2,1);
   overflow: hidden;
@@ -425,43 +436,67 @@ body {
 
 /* inline note add */
 .note-add {
-  display: flex; gap: 8px; align-items: flex-end;
-  margin-bottom: 10px;
+  display: flex; flex-direction: column; gap: 6px;
+  margin-bottom: 12px;
 }
+.note-toolbar {
+  display: flex; gap: 4px; padding: 4px 6px;
+  background: var(--bg); border-radius: 8px 8px 0 0;
+  border: 1px solid var(--sep); border-bottom: none;
+}
+.note-toolbar button {
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; font-weight: 700; color: var(--t2);
+  padding: 3px 7px; border-radius: 5px; font-family: var(--f);
+  transition: background 0.1s, color 0.1s;
+  line-height: 1;
+}
+.note-toolbar button:hover { background: var(--surface); color: var(--primary); }
+.note-toolbar .tb-sep { width: 1px; background: var(--sep); margin: 2px 2px; }
 .note-add textarea {
-  flex: 1; border: 1px solid var(--sep);
-  border-radius: 10px; padding: 8px 11px;
+  width: 100%; border: 1px solid var(--sep);
+  border-radius: 0 0 10px 10px; padding: 10px 12px;
   font-size: 14px; font-family: var(--f);
-  resize: none; min-height: 38px; max-height: 100px;
-  color: var(--t1);
+  resize: vertical; min-height: 80px;
+  color: var(--t1); background: var(--surface);
   transition: border-color 0.1s;
+  line-height: 1.5;
 }
 .note-add textarea:focus { outline: none; border-color: var(--primary); }
-.note-add button {
+.note-add-footer { display: flex; justify-content: flex-end; }
+.note-add-footer button {
   background: var(--primary); color: white;
-  border: none; border-radius: 8px;
-  padding: 8px 13px; font-size: 13px;
+  border: none; border-radius: 9px;
+  padding: 8px 16px; font-size: 13px;
   font-weight: 600; font-family: var(--f);
-  cursor: pointer; flex-shrink: 0;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.3);
 }
-.note-add button:hover { opacity: 0.85; }
+.note-add-footer button:hover { background: var(--primary-dark); }
+
+/* 1-1 notes section (larger) */
+.one-on-one-add textarea {
+  min-height: 140px;
+}
 
 .note-row {
-  padding: 9px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--sep);
   position: relative;
 }
 .note-row:last-child { border-bottom: none; }
-.note-text { font-size: 14px; line-height: 1.45; color: var(--t1); }
-.note-date { font-size: 11px; color: var(--t3); margin-top: 3px; }
+.note-text { font-size: 14px; line-height: 1.55; color: var(--t1); white-space: pre-wrap; }
+.note-date { font-size: 11px; color: var(--t3); margin-top: 4px; }
 .note-del {
   position: absolute; top: 8px; right: 0;
   background: none; border: none; cursor: pointer;
-  color: var(--t4); font-size: 13px;
-  opacity: 0; transition: opacity 0.1s; padding: 2px 4px;
+  color: var(--t4); font-size: 14px;
+  opacity: 0; transition: opacity 0.1s; padding: 4px 6px;
+  border-radius: 6px;
 }
 .note-row:hover .note-del { opacity: 1; }
-.note-del:hover { color: var(--red); }
+.note-row:hover { padding-right: 28px; }
+.note-del:hover { color: var(--red); background: rgba(239,68,68,0.08); }
 
 /* task-add row in panel */
 .task-add {
@@ -706,8 +741,7 @@ hr.sdivider { border: none; border-top: 1px solid var(--sep); margin: 14px 0; }
       <div class="topbar">
         <div class="topbar-row">
           <div class="page-title" id="today-heading">Today</div>
-          <button class="add-btn" onclick="openAdd('task')" title="New task">+</button>
-        </div>
+                  </div>
         <div id="today-date" style="font-size:13px;color:var(--t3);margin-bottom:10px;margin-top:-6px"></div>
       </div>
       <div class="scroll">
@@ -720,8 +754,7 @@ hr.sdivider { border: none; border-top: 1px solid var(--sep); margin: 14px 0; }
       <div class="topbar">
         <div class="topbar-row">
           <div class="page-title">All Tasks</div>
-          <button class="add-btn" onclick="openAdd('task')" title="New task">+</button>
-        </div>
+                  </div>
         <div class="filters" id="task-filters">
           <button class="pill active" onclick="setTaskFilter('open',this)">Open</button>
           <button class="pill" onclick="setTaskFilter('overdue',this)">Overdue</button>
@@ -782,6 +815,10 @@ hr.sdivider { border: none; border-top: 1px solid var(--sep); margin: 14px 0; }
     <span class="tab-btn-icon">◈</span>
     Projects
   </button>
+  <button class="tab-btn" onclick="openSync()">
+    <span class="tab-btn-icon" id="tab-sync-icon">☁</span>
+    Sync
+  </button>
 </div>
 
 <!-- ── DETAIL PANEL ── -->
@@ -838,6 +875,9 @@ hr.sdivider { border: none; border-top: 1px solid var(--sep); margin: 14px 0; }
     </div>
   </div>
 </div>
+
+<!-- ── FLOATING ADD BUTTON ── -->
+<button class="add-btn" onclick="openAdd('task')" title="New task (⌘K)">+</button>
 
 <script>
 // ── DATA ──────────────────────────────────────────────────
@@ -1052,9 +1092,16 @@ function openPerson(id) {
   document.getElementById('pbody').innerHTML = `
     <div class="panel-section">
       <div class="panel-section-title">1-1 Notes</div>
-      <div class="note-add">
-        <textarea id="pnote-in" placeholder="Add a 1-1 note…" rows="2"></textarea>
-        <button onclick="addPersonNote('${id}')">Add</button>
+      <div class="note-add one-on-one-add">
+        <div class="note-toolbar">
+          <button onclick="fmtNote('pnote-in','bold')" title="Bold"><b>B</b></button>
+          <button onclick="fmtNote('pnote-in','italic')" title="Italic"><i>I</i></button>
+          <button onclick="fmtNote('pnote-in','bullet')" title="Bullet">• List</button>
+          <div class="tb-sep"></div>
+          <button onclick="fmtNote('pnote-in','action')" title="Action item">☑ Action</button>
+        </div>
+        <textarea id="pnote-in" placeholder="Add a 1-1 note — use formatting toolbar above…"></textarea>
+        <div class="note-add-footer"><button onclick="addPersonNote('${id}')">Save Note</button></div>
       </div>
       <div id="pnotes-list">${notes.slice().reverse().map(n=>`
         <div class="note-row">
@@ -1064,7 +1111,7 @@ function openPerson(id) {
         </div>`).join('') || '<div style="font-size:13px;color:var(--t3);padding:4px 0">No notes yet</div>'}</div>
     </div>
     <div class="panel-section" style="margin-top:4px">
-      <div class="panel-section-title">Tasks</div>
+      <div class="panel-section-title">Open Tasks</div>
       <div class="task-add">
         <input type="text" id="ptask-in" placeholder="Add a task…">
         <input type="date" class="task-add-date" id="ptask-date">
@@ -1077,8 +1124,13 @@ function openPerson(id) {
     <div class="panel-section" style="margin-top:4px">
       <div class="panel-section-title">Coaching Focus</div>
       <div class="note-add">
+        <div class="note-toolbar">
+          <button onclick="fmtNote('pcoach-in','bold')"><b>B</b></button>
+          <button onclick="fmtNote('pcoach-in','italic')"><i>I</i></button>
+          <button onclick="fmtNote('pcoach-in','bullet')">• List</button>
+        </div>
         <textarea id="pcoach-in" placeholder="What are you coaching toward?">${esc(p.coaching||'')}</textarea>
-        <button onclick="saveCoaching('${id}')">Save</button>
+        <div class="note-add-footer"><button onclick="saveCoaching('${id}')">Save</button></div>
       </div>
     </div>
   `;
@@ -1090,6 +1142,21 @@ function openPerson(id) {
   `;
 
   openPanel();
+}
+
+function fmtNote(elId, type) {
+  const ta = document.getElementById(elId);
+  if (!ta) return;
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const sel = ta.value.substring(start, end);
+  let insert = '';
+  if (type === 'bold') insert = `**${sel || 'bold text'}**`;
+  else if (type === 'italic') insert = `_${sel || 'italic text'}_`;
+  else if (type === 'bullet') insert = (ta.value && !ta.value.endsWith('\n') ? '\n' : '') + `• ${sel || ''}`;
+  else if (type === 'action') insert = (ta.value && !ta.value.endsWith('\n') ? '\n' : '') + `☑ ${sel || 'action item'}`;
+  ta.value = ta.value.substring(0, start) + insert + ta.value.substring(end);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = start + insert.length;
 }
 
 function addPersonNote(id) {
@@ -1347,6 +1414,12 @@ const jbBin = () => localStorage.getItem('jb_bin');
 function setSyncDot(state, label) {
   document.getElementById('sdot').className = 'sdot ' + state;
   document.getElementById('slabel').textContent = label;
+  // Update mobile tab icon
+  const tabIcon = document.getElementById('tab-sync-icon');
+  if (tabIcon) {
+    tabIcon.textContent = state === 'ok' ? '✓' : state === 'busy' ? '↻' : state === 'err' ? '!' : '☁';
+    tabIcon.style.color = state === 'ok' ? 'var(--green)' : state === 'err' ? 'var(--red)' : state === 'busy' ? 'var(--orange)' : '';
+  }
 }
 
 async function syncPush(silent) {
