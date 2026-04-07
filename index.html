@@ -861,12 +861,21 @@ hr.sdivider { border: none; border-top: 1px solid var(--sep); margin: 14px 0; }
     <label>JSONBin API Key</label>
     <input type="password" id="sync-key-input" placeholder="Paste your Master Key…" autocomplete="off">
     <a href="https://jsonbin.io/app/app/api-keys" target="_blank">Get a free key at jsonbin.io →</a>
+    <div style="margin-top:10px">
+      <label>Bin ID <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--t3)">(required on new devices)</span></label>
+      <input type="text" id="sync-bin-input" placeholder="Paste Bin ID from your other device…" autocomplete="off" style="font-family:monospace">
+    </div>
     <div class="sync-btns">
       <button class="sync-btn-p" id="sync-connect-btn" onclick="syncConnect()">Connect</button>
       <button class="sync-btn-s" onclick="closeSync()">Cancel</button>
     </div>
     <hr class="sdivider" id="sync-divider" style="display:none">
     <div id="sync-connected" style="display:none">
+      <div id="sync-bin-display" style="font-size:12px;color:var(--t2);background:var(--bg);border-radius:8px;padding:8px 10px;margin-bottom:10px;word-break:break-all">
+        <span style="font-weight:600;color:var(--t3);text-transform:uppercase;font-size:10px;letter-spacing:.5px">Your Bin ID</span><br>
+        <span id="sync-bin-id-text" style="font-family:monospace;font-size:13px"></span>
+        <button onclick="copyBinId()" style="float:right;background:none;border:none;cursor:pointer;font-size:12px;color:var(--primary);font-weight:600;padding:0">Copy</button>
+      </div>
       <div class="sync-btns">
         <button class="sync-btn-p" onclick="syncPush()">↑ Push</button>
         <button class="sync-btn-s" onclick="syncPull()">↓ Pull</button>
@@ -1451,33 +1460,54 @@ async function syncPull() {
 
 async function syncConnect() {
   const inp = document.getElementById('sync-key-input');
+  const binInp = document.getElementById('sync-bin-input');
   const k = inp.value.trim();
   if (!k) { showSyncMsg('Paste your API key first.','err'); return; }
   const btn = document.getElementById('sync-connect-btn');
   btn.disabled=true; btn.textContent='Connecting…';
   try {
-    let b = localStorage.getItem('jb_bin');
-    if (!b) {
+    // Use entered Bin ID if provided, otherwise check localStorage, otherwise create new
+    let b = binInp.value.trim() || localStorage.getItem('jb_bin');
+    if (b) {
+      // Connect to existing bin and pull data
+      const r = await fetch(`${JBB}/b/${b}/latest`,{headers:{'X-Master-Key':k}});
+      if(r.status===401) throw new Error('Invalid API key');
+      if(r.status===404) throw new Error('Bin ID not found — check and try again');
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const json = await r.json();
+      if (json.record?.tasks) {
+        D = json.record;
+        localStorage.setItem(KEY, JSON.stringify(D));
+        updateBadge(); render(currentView);
+      }
+      localStorage.setItem('jb_bin', b);
+    } else {
+      // First device — create a new bin
       const r = await fetch(`${JBB}/b`,{method:'POST',headers:{'Content-Type':'application/json','X-Master-Key':k,'X-Bin-Name':'Justin Work Tracker','X-Bin-Private':'true'},body:JSON.stringify(D)});
       if(r.status===401) throw new Error('Invalid API key');
       if(!r.ok) throw new Error('HTTP '+r.status);
       const j=await r.json(); b=j.metadata.id; localStorage.setItem('jb_bin',b);
-    } else {
-      const r=await fetch(`${JBB}/b/${b}/latest`,{headers:{'X-Master-Key':k}});
-      if(r.status===401) throw new Error('Invalid API key');
-      if(!r.ok) throw new Error('HTTP '+r.status);
     }
-    localStorage.setItem('jb_key',k); inp.value='';
+    localStorage.setItem('jb_key',k); inp.value=''; binInp.value='';
     showSyncMsg('Connected! Data syncs automatically.','ok');
     document.getElementById('sync-divider').style.display='';
     document.getElementById('sync-connected').style.display='';
-    setSyncDot('ok','Synced'); syncPush(true);
+    document.getElementById('sync-bin-id-text').textContent = b;
+    setSyncDot('ok','Synced');
+    if (!binInp.value) syncPush(true); // only push if not pulling from existing
   } catch(e) { showSyncMsg(e.message,'err'); }
   btn.disabled=false; btn.textContent='Connect';
 }
 
+function copyBinId() {
+  const id = localStorage.getItem('jb_bin');
+  if (!id) return;
+  navigator.clipboard.writeText(id).then(() => toast('Bin ID copied ✓', true));
+}
+
 function syncDisconnect() {
   localStorage.removeItem('jb_key');
+  localStorage.removeItem('jb_bin');
   setSyncDot('off','Not synced');
   document.getElementById('sync-connected').style.display='none';
   document.getElementById('sync-divider').style.display='none';
@@ -1489,6 +1519,7 @@ function openSync() {
   const has=!!jbKey();
   document.getElementById('sync-divider').style.display=has?'':'none';
   document.getElementById('sync-connected').style.display=has?'':'none';
+  if (has && jbBin()) document.getElementById('sync-bin-id-text').textContent = jbBin();
 }
 function closeSync() {
   document.getElementById('sync-modal-bg').classList.remove('open');
