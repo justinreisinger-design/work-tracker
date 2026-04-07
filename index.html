@@ -31,6 +31,49 @@ body {
   overscroll-behavior: none;
 }
 
+/* ── PIN LOCK ── */
+.pin-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 32px;
+}
+.pin-screen.hidden { display: none; }
+.pin-logo {
+  font-size: 15px; font-weight: 600; color: var(--t2); letter-spacing: .02em;
+}
+.pin-title {
+  font-size: 20px; font-weight: 600; color: var(--t1); text-align: center;
+}
+.pin-dots {
+  display: flex; gap: 16px;
+}
+.pin-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--t3); background: transparent;
+  transition: background .15s, border-color .15s;
+}
+.pin-dot.filled { background: var(--primary); border-color: var(--primary); }
+.pin-dot.error { background: var(--red); border-color: var(--red); }
+.pin-pad {
+  display: grid; grid-template-columns: repeat(3, 64px); gap: 12px;
+}
+.pin-btn {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--surface); border: none;
+  font-family: var(--f); font-size: 22px; font-weight: 400; color: var(--t1);
+  cursor: pointer; transition: background .1s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  -webkit-tap-highlight-color: transparent;
+}
+.pin-btn:active, .pin-btn:hover { background: var(--t4); }
+.pin-btn.del { font-size: 18px; color: var(--t2); }
+.pin-btn.empty { background: transparent; box-shadow: none; cursor: default; }
+.pin-hint { font-size: 13px; color: var(--t3); margin-top: -8px; }
+.pin-setup-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.pin-setup-label { font-size:13px; color:var(--t2); }
+
 /* ── APP SHELL ── */
 .shell { display: flex; height: 100vh; overflow: hidden; }
 
@@ -595,6 +638,37 @@ hr.sdivider { border: none; border-top: 1px solid var(--sep); margin: 14px 0; }
 </style>
 </head>
 <body>
+
+<!-- PIN LOCK SCREEN -->
+<div class="pin-screen" id="pin-screen">
+  <div class="pin-logo">Work Tracker</div>
+  <div id="pin-setup-wrap" class="pin-setup-wrap" style="display:none">
+    <div class="pin-title">Set a PIN</div>
+    <div class="pin-setup-label" id="pin-setup-label">Choose a 4-digit PIN</div>
+  </div>
+  <div id="pin-unlock-title" class="pin-title">Enter PIN</div>
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-pad">
+    <button class="pin-btn" onclick="pinKey('1')">1</button>
+    <button class="pin-btn" onclick="pinKey('2')">2</button>
+    <button class="pin-btn" onclick="pinKey('3')">3</button>
+    <button class="pin-btn" onclick="pinKey('4')">4</button>
+    <button class="pin-btn" onclick="pinKey('5')">5</button>
+    <button class="pin-btn" onclick="pinKey('6')">6</button>
+    <button class="pin-btn" onclick="pinKey('7')">7</button>
+    <button class="pin-btn" onclick="pinKey('8')">8</button>
+    <button class="pin-btn" onclick="pinKey('9')">9</button>
+    <button class="pin-btn empty"></button>
+    <button class="pin-btn" onclick="pinKey('0')">0</button>
+    <button class="pin-btn del" onclick="pinDel()">⌫</button>
+  </div>
+  <div class="pin-hint" id="pin-hint"></div>
+</div>
 
 <div class="shell">
 
@@ -1351,14 +1425,105 @@ function showSyncMsg(msg,type) {
   const m=document.getElementById('sync-msg'); m.textContent=msg; m.className='sync-status-msg '+type;
 }
 
-// ── KEYBOARD ─────────────────────────────────────────────
+// ── PIN LOCK ─────────────────────────────────────────────
+const PIN_KEY = 'jt_pin';
+let pinBuffer = '';
+let pinSetupFirst = '';
+let pinMode = 'unlock'; // 'unlock' | 'setup-first' | 'setup-confirm'
+
+function pinHash(s) {
+  // Simple obfuscation — not crypto, just not plaintext
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = (Math.imul(31, h) + s.charCodeAt(i)) | 0; }
+  return h.toString(36);
+}
+
+function pinUpdateDots(color) {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('pd' + i);
+    d.className = 'pin-dot' + (i < pinBuffer.length ? ' ' + (color || 'filled') : '');
+  }
+}
+
+function pinKey(k) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += k;
+  pinUpdateDots();
+  if (pinBuffer.length === 4) setTimeout(pinSubmit, 120);
+}
+
+function pinDel() {
+  pinBuffer = pinBuffer.slice(0, -1);
+  pinUpdateDots();
+  document.getElementById('pin-hint').textContent = '';
+}
+
+function pinSubmit() {
+  const stored = localStorage.getItem(PIN_KEY);
+
+  if (pinMode === 'unlock') {
+    if (pinHash(pinBuffer) === stored) {
+      document.getElementById('pin-screen').classList.add('hidden');
+    } else {
+      pinUpdateDots('error');
+      document.getElementById('pin-hint').textContent = 'Incorrect PIN';
+      setTimeout(() => { pinBuffer = ''; pinUpdateDots(); document.getElementById('pin-hint').textContent = ''; }, 700);
+    }
+
+  } else if (pinMode === 'setup-first') {
+    pinSetupFirst = pinBuffer;
+    pinBuffer = '';
+    pinMode = 'setup-confirm';
+    pinUpdateDots();
+    document.getElementById('pin-setup-label').textContent = 'Confirm your PIN';
+    document.getElementById('pin-hint').textContent = '';
+
+  } else if (pinMode === 'setup-confirm') {
+    if (pinBuffer === pinSetupFirst) {
+      localStorage.setItem(PIN_KEY, pinHash(pinBuffer));
+      document.getElementById('pin-screen').classList.add('hidden');
+    } else {
+      pinUpdateDots('error');
+      document.getElementById('pin-hint').textContent = "PINs didn't match — try again";
+      setTimeout(() => {
+        pinBuffer = ''; pinSetupFirst = ''; pinMode = 'setup-first';
+        pinUpdateDots();
+        document.getElementById('pin-setup-label').textContent = 'Choose a 4-digit PIN';
+        document.getElementById('pin-hint').textContent = '';
+      }, 800);
+    }
+  }
+}
+
+function pinInit() {
+  const stored = localStorage.getItem(PIN_KEY);
+  if (!stored) {
+    // No PIN set yet — ask user to create one
+    pinMode = 'setup-first';
+    document.getElementById('pin-unlock-title').style.display = 'none';
+    document.getElementById('pin-setup-wrap').style.display = 'flex';
+  }
+  // else: default mode is 'unlock', title already says "Enter PIN"
+}
+
+// Allow keyboard input on PIN screen
 document.addEventListener('keydown', e => {
+  const pinVisible = !document.getElementById('pin-screen').classList.contains('hidden');
+  if (pinVisible) {
+    if (e.key >= '0' && e.key <= '9') pinKey(e.key);
+    if (e.key === 'Backspace') pinDel();
+    return;
+  }
   if ((e.metaKey||e.ctrlKey) && e.key==='k') { e.preventDefault(); openAdd('task'); }
   if (e.key==='Escape') { closeAdd(); closePanel(); closeSync(); }
 });
 
+// ── KEYBOARD ─────────────────────────────────────────────
+// (keyboard handled above with PIN awareness)
+
 // ── INIT ─────────────────────────────────────────────────
 (function() {
+  pinInit();
   document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
   updateBadge();
   renderToday();
