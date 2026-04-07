@@ -821,10 +821,9 @@ hr.sdivider { border: none; border-top: 1px solid var(--sep); margin: 14px 0; }
     <h3>☁ Cloud Sync</h3>
     <div class="sync-status-msg" id="sync-msg"></div>
     <p>Connect to <strong>JSONBin</strong> (free) to sync your data across all devices.</p>
-    <p style="margin-bottom:10px">Syncs your data to your Confluence page. Enter your Atlassian API token to connect.</p>
-    <label>Atlassian API Token</label>
-    <input type="password" id="sync-key-input" placeholder="Paste your API token…" autocomplete="off">
-    <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">Generate a token at id.atlassian.com →</a>
+    <label>JSONBin API Key</label>
+    <input type="password" id="sync-key-input" placeholder="Paste your Master Key…" autocomplete="off">
+    <a href="https://jsonbin.io/app/app/api-keys" target="_blank">Get a free key at jsonbin.io →</a>
     <div class="sync-btns">
       <button class="sync-btn-p" id="sync-connect-btn" onclick="syncConnect()">Connect</button>
       <button class="sync-btn-s" onclick="closeSync()">Cancel</button>
@@ -882,7 +881,7 @@ function load() {
 }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(D)); } catch(e){}
-  if (localStorage.getItem('conf_token')) {
+  if (localStorage.getItem('jb_key')) {
     clearTimeout(window._jbT);
     window._jbT = setTimeout(() => syncPush(true), 2000);
   }
@@ -1340,13 +1339,10 @@ function toast(msg, ok=false) {
   window._tt = setTimeout(()=>t.classList.remove('show'), 2000);
 }
 
-// ── CLOUD SYNC (Confluence) ───────────────────────────────
-const CONF_BASE  = 'https://rspproduct.atlassian.net';
-const CONF_PAGE  = '1464991845';
-const CONF_EMAIL = 'justin_reisinger@resourcepro.com';
-const CONF_PROP  = 'tracker-data';
-const confToken  = () => localStorage.getItem('conf_token');
-const confAuth   = () => 'Basic ' + btoa(CONF_EMAIL + ':' + confToken());
+// ── CLOUD SYNC (JSONBin) ──────────────────────────────────
+const JBB = 'https://api.jsonbin.io/v3';
+const jbKey = () => localStorage.getItem('jb_key');
+const jbBin = () => localStorage.getItem('jb_bin');
 
 function setSyncDot(state, label) {
   document.getElementById('sdot').className = 'sdot ' + state;
@@ -1354,50 +1350,28 @@ function setSyncDot(state, label) {
 }
 
 async function syncPush(silent) {
-  if (!confToken()) return;
+  const k=jbKey(), b=jbBin(); if(!k||!b) return;
   setSyncDot('busy','Syncing…');
   try {
-    const check = await fetch(
-      `${CONF_BASE}/wiki/rest/api/content/${CONF_PAGE}/property/${CONF_PROP}`,
-      { headers: { 'Authorization': confAuth(), 'Accept': 'application/json' } }
-    );
-    if (check.ok) {
-      const cur = await check.json();
-      const r = await fetch(
-        `${CONF_BASE}/wiki/rest/api/content/${CONF_PAGE}/property/${CONF_PROP}`,
-        { method:'PUT', headers:{'Authorization':confAuth(),'Content-Type':'application/json'},
-          body: JSON.stringify({ key: CONF_PROP, value: D, version: { number: cur.version.number + 1, minorEdit: true } }) }
-      );
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-    } else {
-      const r = await fetch(
-        `${CONF_BASE}/wiki/rest/api/content/${CONF_PAGE}/property`,
-        { method:'POST', headers:{'Authorization':confAuth(),'Content-Type':'application/json'},
-          body: JSON.stringify({ key: CONF_PROP, value: D }) }
-      );
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-    }
+    const r = await fetch(`${JBB}/b/${b}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':k},body:JSON.stringify(D)});
+    if(!r.ok) throw new Error(r.status);
     setSyncDot('ok','Synced');
-    if (!silent) toast('Saved to Confluence ✓', true);
+    if(!silent) toast('Saved to cloud ✓', true);
   } catch(e) { setSyncDot('err','Sync error'); if(!silent) toast('Sync failed'); }
 }
 
 async function syncPull() {
-  if (!confToken()) return;
+  const k=jbKey(), b=jbBin(); if(!k||!b) return;
   setSyncDot('busy','Loading…');
   try {
-    const r = await fetch(
-      `${CONF_BASE}/wiki/rest/api/content/${CONF_PAGE}/property/${CONF_PROP}`,
-      { headers: { 'Authorization': confAuth(), 'Accept': 'application/json' } }
-    );
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const r = await fetch(`${JBB}/b/${b}/latest`,{headers:{'X-Master-Key':k}});
+    if(!r.ok) throw new Error(r.status);
     const json = await r.json();
-    if (json.value?.tasks) {
-      D = json.value;
-      localStorage.setItem(KEY, JSON.stringify(D));
-    }
+    if(!json.record?.tasks) throw new Error('No data');
+    D = json.record;
+    localStorage.setItem(KEY, JSON.stringify(D));
     setSyncDot('ok','Synced');
-    toast('Loaded from Confluence ✓', true);
+    toast('Loaded from cloud ✓', true);
     updateBadge(); render(currentView); closeSync();
   } catch(e) { setSyncDot('err','Sync error'); toast('Pull failed'); }
 }
@@ -1405,27 +1379,32 @@ async function syncPull() {
 async function syncConnect() {
   const inp = document.getElementById('sync-key-input');
   const k = inp.value.trim();
-  if (!k) { showSyncMsg('Paste your API token first.','err'); return; }
+  if (!k) { showSyncMsg('Paste your API key first.','err'); return; }
   const btn = document.getElementById('sync-connect-btn');
   btn.disabled=true; btn.textContent='Connecting…';
   try {
-    const r = await fetch(
-      `${CONF_BASE}/wiki/rest/api/content/${CONF_PAGE}`,
-      { headers: { 'Authorization': 'Basic ' + btoa(CONF_EMAIL + ':' + k), 'Accept': 'application/json' } }
-    );
-    if (r.status === 401) throw new Error('Invalid token — check and try again');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    localStorage.setItem('conf_token', k); inp.value='';
+    let b = localStorage.getItem('jb_bin');
+    if (!b) {
+      const r = await fetch(`${JBB}/b`,{method:'POST',headers:{'Content-Type':'application/json','X-Master-Key':k,'X-Bin-Name':'Justin Work Tracker','X-Bin-Private':'true'},body:JSON.stringify(D)});
+      if(r.status===401) throw new Error('Invalid API key');
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const j=await r.json(); b=j.metadata.id; localStorage.setItem('jb_bin',b);
+    } else {
+      const r=await fetch(`${JBB}/b/${b}/latest`,{headers:{'X-Master-Key':k}});
+      if(r.status===401) throw new Error('Invalid API key');
+      if(!r.ok) throw new Error('HTTP '+r.status);
+    }
+    localStorage.setItem('jb_key',k); inp.value='';
     showSyncMsg('Connected! Data syncs automatically.','ok');
     document.getElementById('sync-divider').style.display='';
     document.getElementById('sync-connected').style.display='';
-    setSyncDot('ok','Connected'); syncPush(true);
+    setSyncDot('ok','Synced'); syncPush(true);
   } catch(e) { showSyncMsg(e.message,'err'); }
   btn.disabled=false; btn.textContent='Connect';
 }
 
 function syncDisconnect() {
-  localStorage.removeItem('conf_token');
+  localStorage.removeItem('jb_key');
   setSyncDot('off','Not synced');
   document.getElementById('sync-connected').style.display='none';
   document.getElementById('sync-divider').style.display='none';
@@ -1434,7 +1413,7 @@ function syncDisconnect() {
 
 function openSync() {
   document.getElementById('sync-modal-bg').classList.add('open');
-  const has=!!confToken();
+  const has=!!jbKey();
   document.getElementById('sync-divider').style.display=has?'':'none';
   document.getElementById('sync-connected').style.display=has?'':'none';
 }
@@ -1548,7 +1527,7 @@ document.addEventListener('keydown', e => {
   document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
   updateBadge();
   renderToday();
-  if(confToken()) { setSyncDot('busy','Loading…'); syncPull().catch(()=>setSyncDot('ok','Connected')); }
+  if(jbKey()&&jbBin()) { setSyncDot('busy','Loading…'); syncPull().catch(()=>setSyncDot('ok','Connected')); }
   setInterval(()=>save(), 60000);
 })();
 </script>
