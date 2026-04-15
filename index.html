@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Work Tracker</title>
+<title>Tres Commas</title>
 <style>
 :root {
   --bg: #F1F5F9;
@@ -313,14 +313,17 @@ body {
 }
 .meta-chip.gray { background: rgba(60,60,67,0.06); color: var(--t2); }
 
-.task-del {
+.task-actions { display: flex; gap: 2px; align-items: center; flex-shrink: 0; align-self: center; }
+.task-del, .task-edit {
   background: none; border: none; cursor: pointer;
-  color: var(--t4); font-size: 16px;
+  color: var(--t4); font-size: 14px;
   padding: 4px 6px; opacity: 0; transition: opacity 0.15s, color 0.1s, background 0.1s;
-  border-radius: 8px; flex-shrink: 0; align-self: center;
+  border-radius: 8px; flex-shrink: 0;
 }
-.task-item:hover .task-del { opacity: 1; }
+.task-item:hover .task-del,
+.task-item:hover .task-edit { opacity: 1; }
 .task-del:hover { color: var(--red); background: rgba(239,68,68,0.1); }
+.task-edit:hover { color: var(--primary); background: rgba(99,102,241,0.1); }
 
 /* ── EMPTY ── */
 .empty {
@@ -676,7 +679,7 @@ hr.sdivider { border: none; border-top: 1px solid var(--sep); margin: 14px 0; }
 
 <!-- PIN LOCK SCREEN -->
 <div class="pin-screen" id="pin-screen">
-  <div class="pin-logo">Work Tracker</div>
+  <div class="pin-logo">Tres Commas 💰</div>
   <div id="pin-setup-wrap" class="pin-setup-wrap" style="display:none">
     <div class="pin-title">Set a PIN</div>
     <div class="pin-setup-label" id="pin-setup-label">Choose a 4-digit PIN</div>
@@ -709,7 +712,7 @@ hr.sdivider { border: none; border-top: 1px solid var(--sep); margin: 14px 0; }
 
   <!-- ── SIDEBAR ── -->
   <aside class="sidebar">
-    <div class="app-name">Work Tracker <span>Justin · RSP</span></div>
+    <div class="app-name">Tres Commas <span>You can't have three commas…</span></div>
     <nav class="nav">
       <button class="nav-btn active" onclick="go('today')">
         <span class="nav-icon">📅</span> Today
@@ -760,6 +763,19 @@ hr.sdivider { border: none; border-top: 1px solid var(--sep); margin: 14px 0; }
           <button class="pill" onclick="setTaskFilter('overdue',this)">Overdue</button>
           <button class="pill" onclick="setTaskFilter('upcoming',this)">Upcoming</button>
           <button class="pill" onclick="setTaskFilter('done',this)">Done</button>
+        </div>
+        <div style="padding: 0 0 10px">
+          <select id="person-filter-select" onchange="setPersonFilter(this.value)" style="
+            padding: 6px 12px; border-radius: 9px; border: 1px solid var(--sep);
+            font-size: 13px; font-family: var(--f); color: var(--t1);
+            background: var(--surface); cursor: pointer; appearance: none;
+            background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22 viewBox=%220 0 10 6%22><path d=%22M0 0l5 6 5-6z%22 fill=%22%2394A3B8%22/></svg>');
+            background-repeat: no-repeat; background-position: right 10px center;
+            padding-right: 28px; min-width: 160px;
+          ">
+            <option value="">All People</option>
+            <option value="__mine__">— My Tasks —</option>
+          </select>
         </div>
       </div>
       <div class="scroll">
@@ -1007,18 +1023,45 @@ function renderToday() {
 
 // ── ALL TASKS ────────────────────────────────────────────
 let taskFilter = 'open';
+let personFilter = '';
+
 function setTaskFilter(f, el) {
   taskFilter = f;
   document.querySelectorAll('#task-filters .pill').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
   renderTasks();
 }
+
+function setPersonFilter(val) {
+  personFilter = val;
+  renderTasks();
+}
+
+function renderPersonFilterDropdown() {
+  const sel = document.getElementById('person-filter-select');
+  if (!sel) return;
+  // Rebuild options preserving current selection
+  let opts = `<option value="">All People</option><option value="__mine__">— My Tasks —</option>`;
+  if (D.people.length) {
+    opts += `<optgroup label="By Person">`;
+    D.people.forEach(p => {
+      opts += `<option value="${p.id}">${esc(p.name)}</option>`;
+    });
+    opts += `</optgroup>`;
+  }
+  sel.innerHTML = opts;
+  sel.value = personFilter;
+}
+
 function renderTasks() {
+  renderPersonFilterDropdown();
   let items = [...D.tasks];
   if (taskFilter === 'open') items = items.filter(t => !t.done);
   else if (taskFilter === 'overdue') items = items.filter(t => !t.done && isOverdue(t.due));
   else if (taskFilter === 'upcoming') items = items.filter(t => !t.done && !isOverdue(t.due) && !isToday(t.due));
   else if (taskFilter === 'done') items = items.filter(t => t.done);
+  if (personFilter === '__mine__') items = items.filter(t => !t.personId);
+  else if (personFilter) items = items.filter(t => t.personId === personFilter);
   items.sort((a,b) => (a.due||'9999').localeCompare(b.due||'9999'));
   const el = document.getElementById('tasks-list');
   el.innerHTML = items.length ? `<div class="task-list">${items.map(renderTask).join('')}</div>`
@@ -1041,7 +1084,10 @@ function renderTask(t) {
         ${per ? `<span class="meta-chip gray">${per.name.split(' ')[0]}</span>` : ''}
       </div>
     </div>
-    <button class="task-del" onclick="delTask('${t.id}')">✕</button>
+    <div class="task-actions">
+      <button class="task-edit" onclick="editTask('${t.id}')" title="Edit">✎</button>
+      <button class="task-del" onclick="delTask('${t.id}')" title="Delete">✕</button>
+    </div>
   </div>`;
 }
 
@@ -1055,6 +1101,50 @@ function toggleTask(id) {
 function delTask(id) {
   D.tasks = D.tasks.filter(x=>x.id!==id);
   save(); updateBadge(); render(currentView);
+}
+
+function editTask(id) {
+  const t = D.tasks.find(x=>x.id===id); if (!t) return;
+  const modal = document.getElementById('add-modal');
+  document.getElementById('add-modal-title').textContent = 'Edit Task';
+  document.getElementById('add-modal-body').innerHTML = `
+    <div class="field"><label>Task</label><input id="edit-task-text" value="${esc(t.text)}"></div>
+    <div class="field-row">
+      <div class="field"><label>Due Date</label><input type="date" id="edit-task-due" value="${t.due||''}"></div>
+      <div class="field"><label>Priority</label>
+        <select id="edit-task-pri">
+          <option value="high"${t.priority==='high'?' selected':''}>High</option>
+          <option value="med"${t.priority==='med'?' selected':''}>Medium</option>
+          <option value="low"${t.priority==='low'?' selected':''}>Low</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Person</label>
+        <select id="edit-task-per">
+          <option value="">None</option>
+          ${D.people.map(p=>`<option value="${p.id}"${t.personId===p.id?' selected':''}>${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Project</label>
+        <select id="edit-task-proj">
+          <option value="">None</option>
+          ${D.projects.map(p=>`<option value="${p.id}"${t.projectId===p.id?' selected':''}>${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+  `;
+  // Swap save button to update
+  const saveBtn = modal.querySelector('.btn-save');
+  saveBtn.onclick = () => {
+    t.text = document.getElementById('edit-task-text').value.trim() || t.text;
+    t.due = document.getElementById('edit-task-due').value;
+    t.priority = document.getElementById('edit-task-pri').value;
+    t.personId = document.getElementById('edit-task-per').value;
+    t.projectId = document.getElementById('edit-task-proj').value;
+    save(); updateBadge(); render(currentView); closeAdd(); toast('Task updated ✓', true);
+  };
+  modal.classList.add('open');
 }
 
 // ── PEOPLE ───────────────────────────────────────────────
@@ -1168,25 +1258,49 @@ function fmtNote(elId, type) {
   ta.selectionStart = ta.selectionEnd = start + insert.length;
 }
 
+function refreshPersonNotes(id) {
+  const p = person(id); if (!p) return;
+  const notes = p.notes || [];
+  const el = document.getElementById('pnotes-list');
+  if (!el) return;
+  el.innerHTML = notes.slice().reverse().map(n=>`
+    <div class="note-row">
+      <div class="note-text">${esc(n.text)}</div>
+      <div class="note-date">${fmtFull(n.ts)}</div>
+      <button class="note-del" onclick="delPersonNote('${id}','${n.id}')">✕</button>
+    </div>`).join('') || '<div style="font-size:13px;color:var(--t3);padding:4px 0">No notes yet</div>';
+}
+
+function refreshPersonTasks(id) {
+  const openTasks = D.tasks.filter(t=>!t.done && t.personId===id);
+  const el = document.getElementById('ptasks-list');
+  if (!el) return;
+  el.innerHTML = openTasks.length ? openTasks.map(renderTask).join('') : '<div style="font-size:13px;color:var(--t3);padding:6px 0">No open tasks</div>';
+}
+
 function addPersonNote(id) {
   const p = person(id); if (!p) return;
-  const text = document.getElementById('pnote-in').value.trim();
+  const ta = document.getElementById('pnote-in');
+  const text = ta.value.trim();
   if (!text) return;
   if (!p.notes) p.notes = [];
   p.notes.push({ id: uid(), text, ts: new Date().toISOString() });
   p.lastContact = today();
-  save(); toast('Note saved'); openPerson(id);
+  save(); ta.value = ''; toast('Note saved ✓', true);
+  refreshPersonNotes(id);
 }
 function delPersonNote(pid, nid) {
   const p = person(pid); if (!p) return;
   p.notes = (p.notes||[]).filter(n=>n.id!==nid);
-  save(); openPerson(pid);
+  save(); refreshPersonNotes(pid);
 }
 function addPersonTask(id) {
-  const text = document.getElementById('ptask-in').value.trim();
+  const inp = document.getElementById('ptask-in');
+  const text = inp.value.trim();
   if (!text) return;
   D.tasks.push({ id: uid(), text, due: document.getElementById('ptask-date').value, priority:'med', personId:id, projectId:'', done:false, ts:Date.now() });
-  save(); updateBadge(); openPerson(id); toast('Task added');
+  save(); updateBadge(); inp.value = ''; document.getElementById('ptask-date').value = '';
+  toast('Task added ✓', true); refreshPersonTasks(id);
 }
 function saveCoaching(id) {
   const p = person(id); if (!p) return;
